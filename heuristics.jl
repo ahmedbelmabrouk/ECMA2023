@@ -14,10 +14,12 @@ end
 l=distance(n,coordinates)
 donnee=n,L,B,K,W_v,w_v,W,coordinates,l
 function solution_triviale(donnee)
-    m=Model(optimizer_with_attributes(CPLEX.Optimizer, "CPX_PARAM_MIPDISPLAY" =>0,"CPX_PARAM_TILIM" => 900))
+    n,L,B,K,W_v,w_v,W,coordinates,l=donnee
+    m=Model(optimizer_with_attributes(CPLEX.Optimizer, "CPX_PARAM_MIPDISPLAY" =>0))
     @variable(m,y[i=1:n,k=1:K],Bin)
     @constraint(m,[k=1:K],sum(w_v[i]*y[i,k] for i=1:n)<=B)
     @constraint(m,[i=1:n],sum(y[i,k] for k=1:K)==1)
+    @objective(m,Max,sum(sum(w_v[i]*y[i,k] for i=1:n) for k=1:K))
     optimize!(m)
     return value.(y)
 end
@@ -57,7 +59,7 @@ function valid(solution, donnee)
     w_v=donnee[6]
     K=donnee[4]
     verif1=[sum(w_v[i]*solution[i,k] for i in 1:n)<=B for k=1:K ]
-    verif2=[sum(solution[i,k] for i in 1:n)==1 for k in 1:K]
+    verif2=[sum(solution[i,k] for k in 1:K)==1 for i in 1:n]
     verif=[verif1;verif2]
     for i in verif 
         if i==false
@@ -82,9 +84,11 @@ function ls_permut(donnee,nb_duration_max=1800, nb_iter_max=10000)
     iter=0
     nb_cons_reject=0
     nb_move=0
-    start=time_ns()
-    finished=(iter>nb_iter_max)||(nb_cons_reject>100)||(time_ns()-start>nb_duration_max)
+    start=time()
+    duration=time()-start
+    finished=(iter>nb_iter_max)||(nb_cons_reject>10000)||(duration>nb_duration_max)
     cursol=solution_triviale(donnee)
+    
     bestsol=cursol
     n=donnee[1]
 
@@ -99,6 +103,9 @@ function ls_permut(donnee,nb_duration_max=1800, nb_iter_max=10000)
             i2=rand([i for i in 1:n if i!=i1])
             testsol=permut(cursol,i1,i2,donnee)
         end
+        println("i1====$i1,i2====$i2")
+        println("testsol=====$testsol")
+        println("cost=======$(objective(testsol,donnee))")
         if objective(testsol,donnee)<objective(cursol,donnee)
             nb_cons_reject=0
             nb_move+=1
@@ -109,9 +116,9 @@ function ls_permut(donnee,nb_duration_max=1800, nb_iter_max=10000)
         else
             nb_cons_reject+=1
         end
-        duration=time_ns()-start
-        finished=(iter>nb_iter_max)||(nb_cons_reject>100)||(duration>nb_duration_max)
+        duration=time()-start
+        finished=(iter>nb_iter_max)||(nb_cons_reject>10000)||(duration>nb_duration_max)
     end
-    return [bestsol,iter,nb_cons_reject,duration]
+    return [bestsol,objective(bestsol,donnee),iter,nb_cons_reject,duration,nb_move]
 end
 
