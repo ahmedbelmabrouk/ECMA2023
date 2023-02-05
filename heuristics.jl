@@ -1,4 +1,4 @@
-include("data/10_ulysses_3.tsp")
+include("data/22_ulysses_9.tsp")
 
 using JuMP
 using CPLEX
@@ -19,7 +19,7 @@ function solution_triviale(donnee)
     @variable(m,y[i=1:n,k=1:K],Bin)
     @constraint(m,[k=1:K],sum(w_v[i]*y[i,k] for i=1:n)<=B)
     @constraint(m,[i=1:n],sum(y[i,k] for k=1:K)==1)
-    @objective(m,Max,sum(sum(w_v[i]*y[i,k] for i=1:n) for k=1:K))
+  
     optimize!(m)
     return value.(y)
 end
@@ -103,21 +103,23 @@ function ls_permut(donnee,nb_duration_max=1800, nb_iter_max=10000)
             i2=rand([i for i in 1:n if i!=i1])
             testsol=permut(cursol,i1,i2,donnee)
         end
-        println("i1====$i1,i2====$i2")
-        println("testsol=====$testsol")
-        println("cost=======$(objective(testsol,donnee))")
+        
         if objective(testsol,donnee)<objective(cursol,donnee)
             nb_cons_reject=0
             nb_move+=1
             copy!(cursol,testsol)
             if objective(cursol,donnee)<objective(bestsol,donnee)
                 copy!(bestsol,cursol)
+                println("bestsol====$bestsol")
+                println("cost=====$(objective(bestsol,donnee))")
+
             end
         else
             nb_cons_reject+=1
         end
         duration=time()-start
-        finished=(iter>nb_iter_max)||(nb_cons_reject>10000)||(duration>nb_duration_max)
+        #finished=(iter>nb_iter_max)||(duration>nb_duration_max)
+        finished=(duration>nb_duration_max)
     end
     return [bestsol,objective(bestsol,donnee),iter,nb_cons_reject,duration,nb_move]
 end
