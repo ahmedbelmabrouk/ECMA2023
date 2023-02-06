@@ -4,6 +4,8 @@ using Munkres
 using LinearAlgebra
 using SparseArrays
 using Graphs
+using Hungarian
+using Multigraphs
 include("data/10_ulysses_3.tsp")
 function distance(n::Int64,coordinates::Matrix{Float64})
     l=Matrix{Float64}(zeros(n,n))
@@ -74,6 +76,12 @@ function graph_biparti(tsp,bipartite_sett,odd_degree_vertices)
     end
     return (bipartite_graphs,vertices_sets)
 end
+function transform(list_indexes)
+    return[(i,list_indexes[i]) for i in 1:length(list_indexes)]
+end
+function matching_cost(indexes,graph)
+    return sum(graph[j[1],j[2]] for j in indexes)
+end
 function min_matching(tsp,graphs)
     n=SimpleWeightedGraphs.size(tsp)[1]
     minii=10^12
@@ -98,19 +106,80 @@ function min_matching(tsp,graphs)
     return matching_index
 
 end
-function matching_cost(indexes,graph)
-    return sum(graph[j[1],j[2]] for j in indexes)
-end
-function transform(list_indexes)
-    return[(i,list_indexes[i]) for i in 1:length(list_indexes)]
-end
+
+
 function create_multigraph(tsp,mst,matching_indexes,odd_degree)
     multigraph=Multigraph(SimpleWeightedGraphs.nv(tsp))
     for edge in collect(SimpleWeightedGraphs.edges(mst))
-        Multigraph.add_edge!(multigraph,edge)
+        Multigraphs.add_edge!(multigraph,edge)
     end
     for pair in matching_indexes
-        Multigraph.add_edge!(multigraph,pair[1],pair[2])
+        Multigraphs.add_edge!(multigraph,pair[1],pair[2])
     end
     return multigraph
 end
+function weight(tour,n,w_v)
+    w=0
+    for i in tour
+        if i!=n+1
+            w+=w_v[i]
+        end
+    end
+    return w 
+end
+
+    B=donnee[3]
+    w_v=donnee[6]
+    append!(w_v,0)
+    n=donnee[1]
+    weight_tour=0
+    subtours=Dict()
+    i=1
+    tour=[]
+    multigraph=mg
+    tempgraph=Multigraph(0)
+    graph_vertices=Multigraphs.vertices(mg)
+    current_vertex=n+1
+    append!(tour,current_vertex)
+    weight_tour=weight(tour,n,w_v)
+    while Multigraphs.ne(multigraph)>0
+        current_vertex_edges=[edge for edge in collect(Multigraphs.edges(multigraph)) if src(edge)==current_vertex ||dst(edge)==current_vertex]
+        for edge in current_vertex_edges
+            temp_graph=deepcopy(multigraph)
+            println(edge)
+            Multigraphs.rem_edge!(temp_graph,src(edge),dst(edge))
+            if weight_tour+w_v[dst(edge)]>B
+                subtours[i]=append!([v for v in tour],n+1)
+                println(subtours[i])
+                println("--"^70)
+                i+=1
+                tour=[n+1]
+                weight_tour=0
+            end
+                
+            if Multigraphs.is_connected(temp_graph)
+                append!(tour,dst(edge))
+                weight_tour=weight(tour,n,w_v)
+                current_vertex=dst(edge)
+                Multigraphs.rem_edge!(multigraph,src(edge),dst(edge))
+                println(tour)
+                break
+            else
+                append!(tour,dst(edge))
+                weight_tour=weight(tour,n,w_v)
+                current_vertex=dst(edge)
+                Multigraphs.rem_edge!(multigraph,src(edge),dst(edge))
+                println(tour)
+                isolates=[v for v in Multigraphs.vertices(multigraph) if length(all_neighbors(multigraph,v))==0]
+                for v in isolates 
+                    Multigraphs.rem_vertex!(multigraph,v)
+                end
+            end
+            
+        end
+    end
+
+
+
+
+
