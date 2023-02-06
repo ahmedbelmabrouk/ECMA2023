@@ -108,13 +108,16 @@ function min_matching(tsp,graphs)
 end
 
 
-function create_multigraph(tsp,mst,matching_indexes,odd_degree)
-    multigraph=Multigraph(SimpleWeightedGraphs.nv(tsp))
+function create_multigraph(tsp,mst,matching_indexes,odd_degree,donnee)
+    nn=SimpleWeightedGraphs.nv(tsp)
+    multigraph=SimpleGraph(nn)
     for edge in collect(SimpleWeightedGraphs.edges(mst))
-        Multigraphs.add_edge!(multigraph,edge)
+        add_edge!(multigraph,src(edge),dst(edge))
+        println(edge)
     end
     for pair in matching_indexes
-        Multigraphs.add_edge!(multigraph,pair[1],pair[2])
+        add_edge!(multigraph,pair[1],pair[2])
+        println(pair)
     end
     return multigraph
 end
@@ -128,58 +131,99 @@ function weight(tour,n,w_v)
     return w 
 end
 
+include("data/10_ulysses_9.tsp")
+l=distance(n,coordinates)
+donnee=n,L,B,K,W_v,w_v,W,coordinates,l
+
+tsp=creating_tsp(donnee)
+mst=minimum_spanning_tree(tsp,donnee)
+oo=odd_degree(mst,n)
+ss=bipartite_set(oo)
+graphs=graph_biparti(tsp,ss,oo)
+matching_indexes=min_matching(tsp,graphs)
+mg=create_multigraph(tsp,mst,matching_indexes,oo,donnee)
+
+data=["data/10_ulysses_3.tsp","data/10_ulysses_6.tsp","data/10_ulysses_9.tsp","data/14_burma_3.tsp","data/14_burma_6.tsp","data/14_burma_9.tsp","data/22_ulysses_3.tsp","data/22_ulysses_6.tsp","data/22_ulysses_9.tsp","data/26_eil_3.tsp"]
+for path in data 
+    include(path)
+    l=distance(n,coordinates)
+    donnee=n,L,B,K,W_v,w_v,W,coordinates,l
+    tsp=creating_tsp(donnee)
+    mst=minimum_spanning_tree(tsp,donnee)
+    oo=odd_degree(mst,n)
+    ss=bipartite_set(oo)
+    graphs=graph_biparti(tsp,ss,oo)
+    matching_indexes=min_matching(tsp,graphs)
+    mg=create_multigraph(tsp,mst,matching_indexes,oo,donnee)
+    
+    
+end
+include("data/10_ulysses_3.tsp")
+
+
     B=donnee[3]
     w_v=donnee[6]
     append!(w_v,0)
     n=donnee[1]
     weight_tour=0
-    subtours=Dict()
-    i=1
+    
     tour=[]
-    multigraph=mg
-    tempgraph=Multigraph(0)
-    graph_vertices=Multigraphs.vertices(mg)
-    current_vertex=n+1
+    multigraph=copy(mg)
+    temp_graph=Graph(0)
+    graph_vertices=vertices(mg)
+    current_vertex=graph_vertices[1]
     append!(tour,current_vertex)
     weight_tour=weight(tour,n,w_v)
-    while Multigraphs.ne(multigraph)>0
-        current_vertex_edges=[edge for edge in collect(Multigraphs.edges(multigraph)) if src(edge)==current_vertex ||dst(edge)==current_vertex]
-        for edge in current_vertex_edges
+    while ne(multigraph)!=0
+        
+        for edge in [edge for edge in collect(edges(multigraph)) if src(edge)==current_vertex ||dst(edge)==current_vertex]
             temp_graph=deepcopy(multigraph)
-            println(edge)
-            Multigraphs.rem_edge!(temp_graph,src(edge),dst(edge))
+            println("edge teste=$edge")
+            rem_edge!(temp_graph,src(edge),dst(edge))
             if weight_tour+w_v[dst(edge)]>B
-                subtours[i]=append!([v for v in tour],n+1)
-                println(subtours[i])
-                println("--"^70)
-                i+=1
-                tour=[n+1]
-                weight_tour=0
+                println(tour)
+                break
             end
-                
-            if Multigraphs.is_connected(temp_graph)
+            println(collect(edges(temp_graph)))
+            if is_connected(temp_graph)
                 append!(tour,dst(edge))
                 weight_tour=weight(tour,n,w_v)
                 current_vertex=dst(edge)
-                Multigraphs.rem_edge!(multigraph,src(edge),dst(edge))
-                println(tour)
+                rem_edge!(multigraph,src(edge),dst(edge))
+                println("tour=====$tour")
+                println("==="^70)
                 break
             else
                 append!(tour,dst(edge))
                 weight_tour=weight(tour,n,w_v)
                 current_vertex=dst(edge)
-                Multigraphs.rem_edge!(multigraph,src(edge),dst(edge))
-                println(tour)
-                isolates=[v for v in Multigraphs.vertices(multigraph) if length(all_neighbors(multigraph,v))==0]
+                rem_edge!(multigraph,src(edge),dst(edge))
+                println("tour=====$tour")
+                println("==="^70)
+                isolates=[v for v in vertices(multigraph) if length(all_neighbors(multigraph,v))==0]
                 for v in isolates 
-                    Multigraphs.rem_vertex!(multigraph,v)
+                    rem_vertex!(multigraph,v)
                 end
+                
             end
             
         end
     end
 
 
-
-
+    for u in vertices(g)
+        label[u] != 0 && continue
+        label[u] = u
+        Q = Vector{Int64}()
+        push!(Q, u)
+        while !isempty(Q)
+            src = popfirst!(Q)
+            for vertex in all_neighbors(g, src)
+                if label[vertex] == 0
+                    push!(Q, vertex)
+                    label[vertex] = u
+                end
+            end
+        end
+    end
 
