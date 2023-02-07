@@ -40,9 +40,11 @@ optimize!(m)
 z_etoile=objective_value(m)
 print("==> z* =",z_etoile,"<=======")
 x_etoile=value.(x)
+"""
 for i in 1:n 
     for j in 1:n 
         println("x[",i,",",j,"]",x_etoile[i,j])
     end
 end
+"""
 y_etoile=value.(y)
