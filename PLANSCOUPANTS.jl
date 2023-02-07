@@ -29,10 +29,10 @@ m = Model(CPLEX.Optimizer)
 @variable(m, z >=0)
 
 #Définition des contraintes
-@constraint(m, (sum(l[i,j] * x[i,j] for i in 1:n , j in 1:n )) <= z )
-@constraint(m,[i in 1:n ,j in 1:n , k in 1:K ],x[i,j] + y[i,k] - y[j,k] <= 1) #lien entre x et y 1/3
-@constraint(m,[i in 1:n ,j in 1:n , k in 1:K ],x[i,j] - y[i,k] + y[j,k] <= 1) #lien entre x et y 2/3
-@constraint(m,[i in 1:n ,j in 1:n , k in 1:K ],-x[i,j] + y[i,k] + y[j,k] <= 1) #lien entre x et y 3/3
+@constraint(m, (sum(l[i,j] * x[i,j] for i in 1:n , j in i+1:n )) <= z )
+@constraint(m,[i in 1:n ,j in 1:n , k in 1:K;i!=j ],x[i,j] + y[i,k] - y[j,k] <= 1) #lien entre x et y 1/3
+@constraint(m,[i in 1:n ,j in 1:n , k in 1:K;i!=j ],x[i,j] - y[i,k] + y[j,k] <= 1) #lien entre x et y 2/3
+@constraint(m,[i in 1:n ,j in 1:n , k in 1:K;i!=j ],-x[i,j] + y[i,k] + y[j,k] <= 1) #lien entre x et y 3/3
 @constraint(m,[k in 1:K], sum(w_v[i] * y[i,k] for i in 1:n ) <= B)
 @constraint(m,[i in 1:n],sum(y[i,k] for k in 1:K ) == 1)
 
@@ -42,6 +42,11 @@ optimize!(m)
 z_etoile=objective_value(m)
 print("==> z* =",z_etoile,"<=======")
 x_etoile=value.(x)
+for i in 1:n 
+    for j in 1:n 
+        println("x[",i,",",j,"]",x_etoile[i,j])
+    end
+end
 y_etoile=value.(y)
 #**********sous probleme 1************
 m1 = Model(CPLEX.Optimizer)
@@ -91,13 +96,13 @@ vsigma2[k]=value.(sigma2[:,k])
 end
 """
 nb=0
-while z1 > z_etoile || maximum(z2) > B 
-    if z1 > z_etoile > 1e-4
+while (z1 - z_etoile) > 1e-4 || (maximum(z2) - B) > 1e-4
+    if (z1 - z_etoile) > 1e-4
         @constraint(m, (sum((l[i,j]+ vsigma1[i,j]*(lh[i]+lh[j]))* x[i,j] for i in 1:n, j in 1:n) <= z ))
         println("==> ajout de la contrainte SP1")
     end
     for k in 1:K
-        if z2[k] > B
+        if (z2[k] - B) > 1e-4
             @constraint(m,sum(w_v[i]* (1+ vsigma2[k][i])* y[i,k] for i in 1:n, j in 1:n)<=B)
             println("==> ajout de keme contraintes SP2")
         end
