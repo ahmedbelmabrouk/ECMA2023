@@ -24,15 +24,15 @@ function resolution_dualite(n,L,B,K,W_v,w_v,W,coordinates)
 
 
 
-    @constraint(m,[i=1:n,j=1:n,k=1:K],x[i,j]+y[i,k]-y[j,k]<=1)
-    @constraint(m,[i=1:n,j=1:n,k=1:K],x[i,j]-y[i,k]+y[j,k]<=1)
-    @constraint(m,[i=1:n,j=1:n,k=1:K],-x[i,j]+y[i,k]+y[j,k]<=1)
-    @constraint(m,[i=1:n,j=1:n],alpha+beta[i,j]>=(lh[i]+lh[j])*x[i,j])
+    @constraint(m,[i=1:n,j=i:n,k=1:K;i!=j],x[i,j]+y[i,k]-y[j,k]<=1)
+    @constraint(m,[i=1:n,j=1:n,k=1:K;i!=j],x[i,j]-y[i,k]+y[j,k]<=1)
+    @constraint(m,[i=1:n,j=1:n,k=1:K;i!=j],-x[i,j]+y[i,k]+y[j,k]<=1)
+    @constraint(m,[i=1:n,j=1:n;i!=j],alpha+beta[i,j]>=(lh[i]+lh[j])*x[i,j])
     @constraint(m,[k=1:K],sum(w_v[i]*y[i,k]+W_v[i]*phi[i,k] for i=1:n)+W*gamma[k]<=B)
     @constraint(m,[i=1:n,k=1:K],gamma[k]+phi[i,k]>=w_v[i]*y[i,k])
     @constraint(m,[i=1:n],sum(y[i,k] for k=1:K)==1)
 
-    @objective(m,Min,sum(l[i,j]*x[i,j]+3*beta[i,j] for i=1:n,j=1:n)+L*alpha)
+    @objective(m,Min,sum(l[i,j]*x[i,j]+3*beta[i,j] for i=1:n,j=i+1:n)+L*alpha)
     optimize!(m)
     
     return sum(l[i,j]*value.(x)[i,j] for i =1:n, j=1:n),solve_time(m)
