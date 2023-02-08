@@ -80,7 +80,7 @@ function permut(solution,i1,i2,donnee)
     result[i2,k1]=1
     return result
 end
-function ls_permut(donnee,nb_duration_max=1800, nb_iter_max=10000)
+function ls_permut(donnee,nb_duration_max=1800,nb_iter_max=10000)
     iter=0
     nb_cons_reject=0
     nb_move=0
@@ -123,4 +123,15 @@ function ls_permut(donnee,nb_duration_max=1800, nb_iter_max=10000)
     end
     return [bestsol,objective(bestsol,donnee),iter,nb_cons_reject,duration,nb_move]
 end
-
+data=["data/10_ulysses_3.tsp","data/10_ulysses_6.tsp","data/10_ulysses_9.tsp","data/14_burma_3.tsp","data/14_burma_6.tsp","data/14_burma_9.tsp","data/22_ulysses_3.tsp","data/22_ulysses_6.tsp","data/22_ulysses_9.tsp","data/26_eil_3.tsp"]
+for path in data 
+    open("results_descent.txt","a") do file 
+        include(path)
+        l=distance(n,coordinates)
+        donnee=n,L,B,K,W_v,w_v,W,coordinates,l
+        ms=ls_permut(donnee,900)
+        
+        ch=[string(i) for i in ms]
+        println(file,ch)
+    end
+end
