@@ -21,6 +21,7 @@ donnee=n,L,B,K,W_v,w_v,W,coordinates,l
 
 #***************Plan_Coupants****************************
 function PlansCP(n,L,B,K,W_v,w_v,W,coordinates,l)
+    start=time()
 #**********Probleme maitre************
 m = Model(CPLEX.Optimizer)
 
@@ -115,8 +116,21 @@ while (z1 - z_etoile) > 1e-4 || (maximum(z2) - B) > 1e-4
         push!(vsigma2,SP2(k,y_etoile)[2])
     end
 end
-
-return (z_etoile)
+tend=time()
+duree=tend-start
+return (z_etoile,duree)
 end
 val=PlansCP(n,L,B,K,W_v,w_v,W,coordinates,l)
 println("la valeur est = ",val)
+data=["data/10_ulysses_3.tsp","data/10_ulysses_6.tsp","data/10_ulysses_9.tsp","data/14_burma_3.tsp","data/14_burma_6.tsp","data/14_burma_9.tsp","data/22_ulysses_3.tsp","data/22_ulysses_6.tsp","data/22_ulysses_9.tsp","data/26_eil_3.tsp"]
+
+
+
+for path in data 
+    open("results_PC.txt","a") do file 
+        include(path)
+        l=distance(n,coordinates)
+        ms=PlansCP(n,L,B,K,W_v,w_v,W,coordinates,l)
+        println(file,string(n)*"&"*string(K)*"&"*string(ms[1])*"&"*string(ms[2]))
+    end
+end
