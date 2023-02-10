@@ -34,10 +34,16 @@ function resolution_dualite(n,L,B,K,W_v,w_v,W,coordinates)
 
     @objective(m,Min,sum(l[i,j]*x[i,j]+3*beta[i,j] for i=1:n,j=i+1:n)+L*alpha)
     optimize!(m)
-    
-    return sum(l[i,j]*value.(x)[i,j] for i =1:n, j=1:n),solve_time(m)
+    v=0
+    for i in 1:n
+        for j in i+1:n
+            v+=l[i,j]*value.(x)[i,j]
+        end
+    end
+    return objective_value(m),solve_time(m)
 end
-data=["data/10_ulysses_3.tsp","data/10_ulysses_6.tsp","data/10_ulysses_9.tsp","data/14_burma_3.tsp","data/14_burma_6.tsp","data/14_burma_9.tsp","data/22_ulysses_3.tsp","data/22_ulysses_6.tsp","data/22_ulysses_9.tsp","data/26_eil_3.tsp"]
+#data=["data/10_ulysses_3.tsp","data/10_ulysses_6.tsp","data/10_ulysses_9.tsp","data/14_burma_3.tsp","data/14_burma_6.tsp","data/14_burma_9.tsp","data/22_ulysses_3.tsp","data/22_ulysses_6.tsp","data/22_ulysses_9.tsp","data/26_eil_3.tsp"]
+data=["data/14_burma_9.tsp","data/22_ulysses_3.tsp","data/22_ulysses_6.tsp","data/22_ulysses_9.tsp","data/26_eil_3.tsp"]
 
 
 
