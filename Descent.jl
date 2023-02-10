@@ -13,14 +13,51 @@ function distance(n::Int64,coordinates::Matrix{Float64})
 end
 l=distance(n,coordinates)
 donnee=n,L,B,K,W_v,w_v,W,coordinates,l
-function solution_triviale(donnee)
+function U1(donnee,x)
     n,L,B,K,W_v,w_v,W,coordinates,l=donnee
+    m1 = Model(optimizer_with_attributes(CPLEX.Optimizer, "CPX_PARAM_MIPDISPLAY" =>0))
+    @variable(m1, sigma1[i in 1:n,j in 1:n] >=0.01)
+    @constraint(m1, sum(sigma1[i,j] for i in 1:n,j in i+1:n) <= L)
+    @constraint(m1 , [i in 1:n, j in 1:n] , sigma1[i,j] <= 3)
+    
+    
+    
+    @objective(m1,Max, sum((l[i,j]+sigma1[i,j]*(lh[i]+lh[j]))*x[i,j] for i=1:n, j=i+1:n))
+    optimize!(m1)
+    l1=zeros(n,n)
+    for i in 1:n
+        for j=1:n
+            l1[i,j]=l[i,j]+value.(sigma1)[i,j]*(lh[i]+lh[j])
+        end
+    end
+    return l1
+end
+function U2(donnee)
+    n,L,B,K,W_v,w_v,W,coordinates,l=donnee
+    m2 = Model(optimizer_with_attributes(CPLEX.Optimizer, "CPX_PARAM_MIPDISPLAY" =>0))
+    @variable(m2, sigma2[i in 1:n] >=0.05)
+    @constraint(m2, (sum(sigma2[i] for i in 1:n) <= W))
+    @constraint(m2, [i in 1:n] , sigma2[i] <= W_v[i] )
+    
+    optimize!(m2)
+    w_v2=[w_v[i]*(1+value.(sigma2)[i]) for i in 1:n]
+    return w_v2
+end
+function solution_triviale(donnee)
+
+    n,L,B,K,W_v,w_v,W,coordinates,l=donnee
+    
+    w_v2=U2(donnee)
     m=Model(optimizer_with_attributes(CPLEX.Optimizer, "CPX_PARAM_MIPDISPLAY" =>0))
     @variable(m,y[i=1:n,k=1:K],Bin)
-    @constraint(m,[k=1:K],sum(w_v[i]*y[i,k] for i=1:n)<=B)
-    @constraint(m,[i=1:n],sum(y[i,k] for k=1:K)==1)
-  
+
+    
+    #Définition des contraintes
+
+    @constraint(m,[k in 1:K], sum(w_v2[i] * y[i,k] for i in 1:n ) <= B)
+    @constraint(m,[i in 1:n],sum(y[i,k] for k in 1:K ) == 1)
     optimize!(m)
+
     return value.(y)
 end
 function coexistance(solution,donnee)
@@ -40,9 +77,15 @@ function coexistance(solution,donnee)
 end
 function objective(solution,donnee)
     x=coexistance(solution,donnee)
-    l=donnee[9]
+    l1=U1(donnee,x)
     n=donnee[1]
-    return sum(x[i,j]*l[i,j] for i=1:n, j=1:n)
+    v=0
+    for i in 1:n
+        for j in 1:n
+            v+=l1[i,j]*x[i,j]
+        end
+    end
+    return v
 end
 
 function cluster(solution, i ,donnee)
@@ -103,7 +146,7 @@ function ls_permut(donnee,nb_duration_max=1800,nb_iter_max=10000)
             i2=rand([i for i in 1:n if i!=i1])
             testsol=permut(cursol,i1,i2,donnee)
         end
-        
+        println(objective(testsol,donnee))
         if objective(testsol,donnee)<objective(cursol,donnee)
             nb_cons_reject=0
             nb_move+=1
@@ -118,20 +161,27 @@ function ls_permut(donnee,nb_duration_max=1800,nb_iter_max=10000)
             nb_cons_reject+=1
         end
         duration=time()-start
-        #finished=(iter>nb_iter_max)||(duration>nb_duration_max)
-        finished=(duration>nb_duration_max)
+        finished=(iter>nb_iter_max)||(duration>nb_duration_max)
+        #finished=(duration>nb_duration_max)
     end
-    return [bestsol,objective(bestsol,donnee),iter,nb_cons_reject,duration,nb_move]
+    return [objective(bestsol,donnee),iter,nb_cons_reject,duration,nb_move]
 end
-data=["data/10_ulysses_3.tsp","data/10_ulysses_6.tsp","data/10_ulysses_9.tsp","data/14_burma_3.tsp","data/14_burma_6.tsp","data/14_burma_9.tsp","data/22_ulysses_3.tsp","data/22_ulysses_6.tsp","data/22_ulysses_9.tsp","data/26_eil_3.tsp"]
+data=["data/10_ulysses_6.tsp","data/10_ulysses_9.tsp","data/14_burma_3.tsp","data/14_burma_6.tsp","data/14_burma_9.tsp","data/22_ulysses_3.tsp","data/22_ulysses_6.tsp","data/22_ulysses_9.tsp","data/26_eil_3.tsp"]
 for path in data 
     open("results_descent.txt","a") do file 
         include(path)
         l=distance(n,coordinates)
         donnee=n,L,B,K,W_v,w_v,W,coordinates,l
-        ms=ls_permut(donnee,900)
+        ms=ls_permut(donnee,300)
         
-        ch=[string(i) for i in ms]
+        ch=append!([string(n),string(K)],[string(i) for i in ms])
         println(file,ch)
     end
 end
+include(data[1])
+        l=distance(n,coordinates)
+        donnee=n,L,B,K,W_v,w_v,W,coordinates,l
+        ms=ls_permut(donnee,900,1000)
+        
+        ch=[string(i) for i in ms]
+        println(ch)
