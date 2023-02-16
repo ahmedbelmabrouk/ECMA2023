@@ -59,24 +59,17 @@ function SP2(k,y_etoile)
     
 end
 function isIntegerPoint(cb_data::CPLEX.CallbackContext, context_id::Clong)
-    # context_id == CPX_CALLBACKCONTEXT_CANDIDATE si le callback est
-    # appelé dans un des deux cas suivants :
-    # cas 1 - une solution entière a été obtenue; ou
-    # cas 2 - une relaxation non bornée a été obtenue
     if context_id != CPX_CALLBACKCONTEXT_CANDIDATE
-    return false
+        return false
     end
-    # Pour déterminer si on est dans le cas 1 ou 2, on essaie de récupérer la
-    # solution entière courante
     ispoint_p = Ref{Cint}()
     ret = CPXcallbackcandidateispoint(cb_data, ispoint_p)
-    # S’il n’y a pas de solution entière
     if ret != 0 || ispoint_p[] == 0
-    return false
+        return false
     else
-    return true
+        return true
     end
-    end
+end
 
 function my_cb_function(cb_data::CPLEX.CallbackContext, context_id::Clong)
     if isIntegerPoint(cb_data, context_id)
@@ -86,7 +79,7 @@ function my_cb_function(cb_data::CPLEX.CallbackContext, context_id::Clong)
         x_etoile = callback_value.(cb_data, x)
         y_etoile = callback_value.(cb_data, y)
         z_val = callback_value(cb_data, z)
-        println("===========> z*=",z_val)
+        #println("===========> z*=",z_val)
         
         @objective(m1, Max, sum((l[i,j]+sigma1[i,j]*(lh[i]+lh[j])) * x_etoile[i,j] for i in 1:n, j in i+1:n))
         optimize!(m1)
@@ -101,22 +94,22 @@ function my_cb_function(cb_data::CPLEX.CallbackContext, context_id::Clong)
             push!(vsigma2,SP2(k,y_etoile)[2])
             #println("!<!<!<!<!<",vsigma2[k])
         end
-        println(y_etoile)
-        println(vsigma2)
+        #println(y_etoile)
+        #println(vsigma2)
 
         if (z1 - z_val) > 1e-4
             cstr1 = @build_constraint (sum((l[i,j]+ vsigma1[i,j]*(lh[i]+lh[j]))* x[i,j] for i in 1:n, j in i+1:n) <= z )
             MOI.submit(m, MOI.LazyConstraint(cb_data), cstr1)
-            println("==> ajout de la contrainte SP1")
+            #println("==> ajout de la contrainte SP1")
         end
         if maximum(z2)-B > 1e-4
             for k in 1:K
-                println(">>>>>>>>>>>VAL VIOL:",z2[k] - B)
+                #println(">>>>>>>>>>>VAL VIOL:",z2[k] - B)
                 if z2[k] - B > 1e-4
-                    cstr2 = @build_constraint (sum(w_v[i]* (1+ vsigma2[k][i])* y[i,k] for i in 1:n, j in i+1:n)<=B)
+                    cstr2 = @build_constraint (sum(w_v[i]* (1+ vsigma2[k][i])* y[i,k] for i in 1:n)<=B)
                     MOI.submit(m, MOI.LazyConstraint(cb_data), cstr2)
-                    println("==> ajout de keme contraintes SP2",cstr2)
-                    #println(m)
+                    #println("==> ajout de keme contraintes SP2",cstr2)
+                    
                 end
             end
         end
