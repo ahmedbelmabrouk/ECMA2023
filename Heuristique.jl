@@ -17,7 +17,9 @@ function distance(n::Int64,coordinates::Matrix{Float64})
 end
 l=distance(n,coordinates)
 donnee=n,L,B,K,W_v,w_v,W,coordinates,l
-
+function k_means(n,L,B,K,W_v,w_v,W,coordinates)
+    start=time()
+    l=distance(n,coordinates)
 #***********Max des poids (poids au pire des cas )************
 w_v_val=[w_v[i] *(1+ W_v[i]) for i in 1:n]
 
@@ -77,3 +79,20 @@ while (z1 - z_etoile) > 1e-4
 end
 y_etoile=value.(y)
 println("la valeur est = ",z_etoile)
+return z_etoile, time()-start
+end
+ms=k_means(n,L,B,K,W_v,w_v,W,coordinates)
+
+#data=["data/10_ulysses_3.tsp","data/10_ulysses_6.tsp","data/10_ulysses_9.tsp","data/14_burma_3.tsp","data/14_burma_6.tsp","data/14_burma_9.tsp","data/22_ulysses_3.tsp","data/22_ulysses_6.tsp","data/22_ulysses_9.tsp","data/26_eil_3.tsp"]
+data=["data/14_burma_9.tsp","data/22_ulysses_3.tsp","data/22_ulysses_6.tsp","data/22_ulysses_9.tsp","data/26_eil_3.tsp"]
+
+
+
+for path in data 
+    open("results_k_means.txt","a") do file 
+
+        include(path)
+        ms=k_means(n,L,B,K,W_v,w_v,W,coordinates)
+        println(file,string(n)*"&"*string(K)*"&"*string(ms[1])*"&"*string(ms[2]))
+    end
+end

@@ -16,8 +16,10 @@ function distance(n::Int64,coordinates::Matrix{Float64})
     return l
 end
 l=distance(n,coordinates)
-donnee=n,L,B,K,W_v,w_v,W,coordinates,l
+function B_C(n,L,B,K,W_v,w_v,W,coordinates)
+    l=distance(n,coordinates)
 
+start=time()
 #**********Probleme maitre************
 m = Model(CPLEX.Optimizer)
 MOI.set(m, MOI.NumberOfThreads(), 1)
@@ -122,3 +124,17 @@ optimize!(m)
 z_etoile = objective_value(m)
 println("Objective value: ", z_etoile)
 #return (z_etoile)
+return z_etoile,time()-start
+end
+#data=["data/10_ulysses_3.tsp","data/10_ulysses_6.tsp","data/10_ulysses_9.tsp","data/14_burma_3.tsp","data/14_burma_6.tsp","data/14_burma_9.tsp","data/22_ulysses_3.tsp","data/22_ulysses_6.tsp","data/22_ulysses_9.tsp","data/26_eil_3.tsp"]
+data=["data/14_burma_9.tsp","data/22_ulysses_3.tsp","data/22_ulysses_6.tsp","data/22_ulysses_9.tsp","data/26_eil_3.tsp"]
+B_C(n,L,B,K,W_v,w_v,W,coordinates)
+
+
+for path in data 
+    open("results_B_C.txt","a") do file 
+        include(path)
+        ms=B_C(n,L,B,K,W_v,w_v,W,coordinates)
+        println(file,string(n)*"&"*string(K)*"&"*string(ms[1])*"&"*string(ms[2]))
+    end
+end
